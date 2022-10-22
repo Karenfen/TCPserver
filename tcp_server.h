@@ -1,36 +1,26 @@
-#ifndef TCP_SERVER_H
-#define TCP_SERVER_H
+#pragma once
+
+#include <memory>
 
 
-#include <algorithm>
-#include <iostream>
-#include <map>
-
-#include <boost/asio.hpp>
-
-#include "tcpconnection.h"
+//class servImpl;
 #include "serverimpl.h"
-
-
-
 
 class TCPserver
 {
 public:
-    TCPserver(const int& port, boost::asio::io_context& context);
-    void init();
+    TCPserver(const int& port = 0);
+    ~TCPserver() = default;
+    TCPserver(const TCPserver& other) = delete;
+    TCPserver(TCPserver&& other): m_impl(std::move(other.m_impl)){};
+    TCPserver& operator=(TCPserver other) = delete;
+
+public:
+    void start();
 
 private:
-    void start_accept();
-    std::string m_get_name_client(const tcp::socket& klient_sock);
-    void handler(TCPconnection::smart_pointer klient, const boost::system::error_code& error);
-
-private:
-
-    boost::asio::io_context& m_context;
-    tcp::acceptor m_acceptor;
-    bool is_run;
+    std::unique_ptr<servImpl> m_impl{};
 
 };
 
-#endif // TCP_SERVER_H
+

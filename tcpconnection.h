@@ -1,5 +1,5 @@
-#ifndef TCPCONNECTION_H
-#define TCPCONNECTION_H
+#pragma once
+
 
 #include <memory>
 #include <functional>
@@ -21,6 +21,7 @@ public:
     static smart_pointer create(boost::asio::io_context& context);
     void start();
     tcp::socket& socket(){ return m_socket; };
+    ~TCPconnection() = default;
 
 private:
     TCPconnection(boost::asio::io_context& context);
@@ -36,4 +37,4 @@ private:
     char m_buffer_write[SIZE_BUFFER];
 };
 
-#endif // TCPCONNECTION_H
+

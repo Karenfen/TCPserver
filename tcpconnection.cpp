@@ -13,15 +13,8 @@ std::shared_ptr<TCPconnection> TCPconnection::create(boost::asio::io_context &co
 
 void TCPconnection::start()
 {
-    try
-    {
-        m_recive_data();
-    }
-    catch (std::exception& e)
-    {
-        std::cerr << "Session is aborted!" << std::endl;
-        std::cerr << e.what() << std::endl;
-    }
+    m_recive_data();
+
 }
 
 TCPconnection::TCPconnection(boost::asio::io_context &context): m_socket(context)
