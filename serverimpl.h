@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <QObject>
 #include <memory>
 #include <boost/asio.hpp>
 
@@ -9,11 +10,13 @@
 
 
 
-class servImpl
+class servImpl : public QObject
 {
+    Q_OBJECT
+
 public:
     ~servImpl() = default;
-    servImpl(const int& port);
+    servImpl(const int& port, QObject* parent = nullptr);
 
 protected:
     void start_accept();

@@ -2,7 +2,8 @@
 
 #include <iostream>
 #include <string>
-#include <boost/bind/bind.hpp>
+//#include <boost/bind/bind.hpp>
+
 
 
 
@@ -17,7 +18,9 @@ void TCPconnection::start()
 
 }
 
-TCPconnection::TCPconnection(boost::asio::io_context &context): m_socket(context)
+TCPconnection::TCPconnection(boost::asio::io_context &context, QObject* parent):
+    QObject(parent),
+    m_socket(context)
 {
 
 }

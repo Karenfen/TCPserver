@@ -5,7 +5,7 @@
 
 
 
-servImpl::servImpl(const int& port):
+servImpl::servImpl(const int& port, QObject* parent): QObject(parent),
     m_context(std::make_unique<boost::asio::io_context>()),
     m_acceptor(std::make_unique<tcp::acceptor>(*m_context, tcp::endpoint(tcp::v4(), port)))
 {

@@ -1,5 +1,6 @@
 #include "tcp_server.h"
 
+#include <QApplication>
 #include <iostream>
 #include <cerrno>
 
@@ -13,6 +14,8 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    QApplication a(argc, argv);
+
     try
     {
         TCPserver server(std::stoi(argv[1]));
@@ -24,5 +27,5 @@ int main(int argc, char *argv[])
         std::cerr << e.what() << std::endl;
     }
 
-    return EXIT_SUCCESS;
+    return a.exec();
 }

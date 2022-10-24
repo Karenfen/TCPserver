@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include <QObject>
+#include <QtNetwork>
 #include <memory>
 #include <functional>
 #include <boost/asio.hpp>
@@ -13,8 +15,10 @@ using namespace boost::asio::ip;
 
 
 
-class TCPconnection : public std::enable_shared_from_this<TCPconnection>
+class TCPconnection :  public QObject, std::enable_shared_from_this<TCPconnection>
 {
+    Q_OBJECT
+
 public:
     typedef  std::shared_ptr<TCPconnection> smart_pointer;
 
@@ -22,9 +26,15 @@ public:
     void start();
     tcp::socket& socket(){ return m_socket; };
     ~TCPconnection() = default;
+    s
+private slots:
+
+
+signals:
+
 
 private:
-    TCPconnection(boost::asio::io_context& context);
+    TCPconnection(boost::asio::io_context& context, QObject* parent = nullptr);
     void m_handle_write(const boost::system::error_code&, size_t bytes_transferred);
     void m_recive_data();
     void m_handle_read(const boost::system::error_code&, size_t bytes_recived);
