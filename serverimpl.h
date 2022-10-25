@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <memory>
-#include <boost/asio.hpp>
 
 #include "tcpconnection.h"
 
@@ -22,13 +21,17 @@ protected:
     void start_accept();
     void run();
 
+private slots:
+    void handler(TCPconnection::smart_pointer klient, const boost::system::error_code &error);
+
+signals:
+
+
 private:
     std::string m_get_name_client(const tcp::socket& klient_sock);
-    void handler(TCPconnection::smart_pointer klient, const boost::system::error_code &error);
     
 private:
-    std::unique_ptr<boost::asio::io_context> m_context{};
-    std::unique_ptr<tcp::acceptor> m_acceptor{};
+    QTcpServer server{};
     
     friend class TCPserver;
 };

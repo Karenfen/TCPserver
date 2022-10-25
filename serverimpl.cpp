@@ -11,6 +11,7 @@ servImpl::servImpl(const int& port, QObject* parent): QObject(parent),
 {
      m_acceptor->set_option(tcp::acceptor::reuse_address(true));
 
+
 }
 
 

@@ -2,84 +2,54 @@
 
 #include <iostream>
 #include <string>
-//#include <boost/bind/bind.hpp>
 
 
 
 
-std::shared_ptr<TCPconnection> TCPconnection::create(boost::asio::io_context &context)
+
+std::shared_ptr<TCPconnection> TCPconnection::create(QTcpSocket* socket)
 {
-    return smart_pointer(new TCPconnection(context));
+    return smart_pointer(new TCPconnection(socket));
 }
 
-void TCPconnection::start()
-{
-    m_recive_data();
 
-}
-
-TCPconnection::TCPconnection(boost::asio::io_context &context, QObject* parent):
-    QObject(parent),
-    m_socket(context)
+TCPconnection::TCPconnection(QTcpSocket* socket, QObject* parent):
+    QObject(parent), socket_(socket)
 {
+    connect(socket_, &QTcpSocket::readyRead, this, &TCPconnection::reading_data);
+    connect(this, SIGNAL(reading_completed(int)), this, SLOT(request_processing(int)));
+    connect(this, &TCPconnection::answer_ready, this, &TCPconnection::send_data);
 
 }
 
 
-void TCPconnection::m_recive_data()
+
+TCPconnection::~TCPconnection()
 {
-    auto this_ptr = shared_from_this();
-
-    //    boost::asio::async_read(m_socket, boost::asio::buffer(m_buffer), [this_ptr](const boost::system::error_code& error, size_t bytes_recived)
-//    {
-//        this_ptr->m_handle_read(error, bytes_recived);
-//    });
-        m_socket.async_read_some(boost::asio::buffer(m_buffer_read),
-                            [this_ptr](const boost::system::error_code& error, size_t bytes_recived)
-                             {
-                                 this_ptr->m_handle_read(error, bytes_recived);
-                             });
-}
-
-void TCPconnection::m_handle_read(const boost::system::error_code &, size_t bytes_recived)
-{
-    std::cout << "Bytes recived: " << bytes_recived
-    << " from address: " << m_socket.remote_endpoint().address() << std::endl;
-
-    // выполняем обработку запроса
-    m_some_working();
-
-    // отправляем ответ
-    m_send_data(std::string(m_buffer_write, bytes_recived));
+    delete socket_;
 }
 
 
-void TCPconnection::m_send_data(const std::string &data)
+void TCPconnection::reading_data()
 {
-    auto this_ptr = shared_from_this();
+   buffer_to_read_ = socket_->readAll();
 
-    boost::asio::async_write(m_socket, boost::asio::buffer(data), [this_ptr](const boost::system::error_code& error, size_t bytes_transferred)
-    {
-        this_ptr->m_handle_write(error, bytes_transferred);
-    });
-}
-
-void TCPconnection::m_some_working()
-{
-    for(int iter{0}; iter < SIZE_BUFFER; ++iter)
-    {
-        m_buffer_write[iter] = m_buffer_read[iter];
-    }
+   emit reading_completed(buffer_to_read_.size());
 }
 
 
 
-void TCPconnection::m_handle_write(const boost::system::error_code&, size_t bytes_transferred)
+void TCPconnection::request_processing(int bytes_recived)
 {
-    std::cout << "Bytes transferred: " << bytes_transferred
-    << " to address: " << m_socket.remote_endpoint().address() << std::endl;
+    buffer_to_write_ = buffer_to_read_;
 
-    start();
+    emit answer_ready();
 }
+
+void TCPconnection::send_data()
+{
+    socket_->write(buffer_to_write_);
+}
+
 
 
