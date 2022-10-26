@@ -1,68 +1,98 @@
 #include "serverimpl.h"
 
 #include <iostream>
+#include <QAbstractSocket>
+#include <exception>
+#include <QApplication>
 
 
 
 
-servImpl::servImpl(const int& port, QObject* parent): QObject(parent),
-    m_context(std::make_unique<boost::asio::io_context>()),
-    m_acceptor(std::make_unique<tcp::acceptor>(*m_context, tcp::endpoint(tcp::v4(), port)))
+servImpl::servImpl(const int& port, QObject* parent):
+    QObject(parent), server_ipV4(new QTcpServer()), server_ipV6(new QTcpServer()), port_(port)
 {
-     m_acceptor->set_option(tcp::acceptor::reuse_address(true));
+    if(!server_ipV4 || !server_ipV6)
+    {
+        throw std::runtime_error("Initialization error!");
+    }
+
+    connect(server_ipV4.get(), &QTcpServer::acceptError, this, &servImpl::accept_error_handler);
+    connect(server_ipV6.get(), &QTcpServer::acceptError, this, &servImpl::accept_error_handler);
+    connect(server_ipV4.get(), &QTcpServer::newConnection, this, &servImpl::accept_connection);
+    connect(server_ipV6.get(), &QTcpServer::newConnection, this, &servImpl::accept_connection);
 
 }
 
-
-void servImpl::start_accept()
-{
-    TCPconnection::smart_pointer new_klient = TCPconnection::create(*m_context);
-
-//    m_acceptor.async_accept(new_klient->socket(), boost::bind(&TCPserver::handler, new_klient, std::placeholders::_1));  /* выдаёт ошибку... так и не разобрался*/
-
-    m_acceptor->async_accept(new_klient->socket(),
-        [this, new_klient] (const boost::system::error_code& error)
-        {
-            this->handler(new_klient, error);
-        }
-    );
-}
 
 void servImpl::run()
 {
-    start_accept();
-    m_context->run();
-};
+    if(!server_ipV4->listen(QHostAddress::LocalHost, port_))
+        std::cerr << "Listening server ip v4 error!" << std::endl;
 
+    if(!server_ipV6->listen(QHostAddress::LocalHostIPv6, port_))
+        std::cerr << "Listening server ip v6 error!" << std::endl;
 
-std::string servImpl::m_get_name_client(const tcp::socket& klient_sock)
-{
-//    const socklen_t client_name_len = NI_MAXHOST;
-//    char client_name_buf[client_name_len];
+    if(!server_ipV4->isListening() && !server_ipV6->isListening())
+        throw std::logic_error(server_ipV4->errorString().toStdString() + " / " + server_ipV6->errorString().toStdString());
 
-//    if(!getnameinfo(klient_sock, client_name_buf, client_name_len, NULL, 0, NI_NAMEREQD))
-//        return client_name_buf;
+    std::cout << "Server IP4 is listening address ("
+              <<  server_ipV4->serverAddress().toString().toStdString()
+              << ") port: " << server_ipV4->serverPort() << std::endl;
 
-    return "*****";
+    std::cout << "Server IP6 is listening address ("
+              <<  server_ipV6->serverAddress().toString().toStdString()
+              << ") port: " << server_ipV6->serverPort() << std::endl;
 }
 
 
-void servImpl::handler(TCPconnection::smart_pointer klient, const boost::system::error_code &error)
+void servImpl::accept_connection()
 {
-    if(!error)
+    auto klient_socket = qobject_cast<QTcpServer*>(sender())->nextPendingConnection();
+
+    if(klient_socket)
     {
-        std::cout << "start session..." << std::endl;
+        std::cout << "Colient: "
+                  << klient_socket->peerName().toStdString()
+                  << " with address: "
+                  << klient_socket->peerAddress().toString().toStdString()
+                  << " connected from port: "
+                  << klient_socket->peerPort()
+                  << std::endl;
 
-        try
-        {
-            klient->start();
-        }
-        catch (std::exception& e)
-        {
-            std::cerr << "Session is aborted!" << std::endl;
-            std::cerr << e.what() << std::endl;
-        }
+        auto klient = new TCPconnection(klient_socket, this);
+
+        connect(klient, &TCPconnection::connection_is_aborted, this, &servImpl::delet_klient);
+        connect(klient, &TCPconnection::close_server, this, &servImpl::shutdown);
     }
-
-    start_accept();
 }
+
+
+void servImpl::accept_error_handler(QAbstractSocket::SocketError socket_error)
+{
+    std::cerr << "Accept error! " << socket_error << std::endl;
+    qobject_cast<QTcpServer>(sender()).resumeAccepting();
+}
+
+
+void servImpl::delet_klient(TCPconnection *klient)
+{
+    std::cout << "Connection with client ("
+              << klient->get_info()
+              << ") aborted" << std::endl;
+
+    delete klient;
+}
+
+
+void servImpl::shutdown(TCPconnection *klient)
+{
+    delet_klient(klient);
+
+    std::cout << "Server shuts down..." << std::endl;
+
+    server_ipV4->close();
+    server_ipV6->close();
+
+    qApp->exit();
+}
+

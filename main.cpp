@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-        std::cout << "Usage: " << argv[0] << " <port to ip4> " <<std::endl;
+        std::cout << "Usage: " << argv[0] << " <port> " <<std::endl;
         return EXIT_FAILURE;
     }
 

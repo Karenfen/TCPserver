@@ -1,10 +1,9 @@
 #pragma once
 
 #include <memory>
-
-
-//class servImpl;
 #include "serverimpl.h"
+
+
 
 class TCPserver
 {
@@ -19,7 +18,7 @@ public:
     void start();
 
 private:
-    std::unique_ptr<servImpl> m_impl{};
+    std::unique_ptr<servImpl> m_impl;
 
 };
 

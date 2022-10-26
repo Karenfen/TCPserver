@@ -2,84 +2,96 @@
 
 #include <iostream>
 #include <string>
-//#include <boost/bind/bind.hpp>
+#include <QHostAddress>
 
 
 
 
-std::shared_ptr<TCPconnection> TCPconnection::create(boost::asio::io_context &context)
+
+
+TCPconnection::TCPconnection(QTcpSocket* socket, QObject* parent):
+    QObject(parent), socket_(socket)
 {
-    return smart_pointer(new TCPconnection(context));
-}
+    commands_["exit"] = CLOSE_CONNECTION;
+    commands_["close"] = CLOSE_SERVER;
 
-void TCPconnection::start()
-{
-    m_recive_data();
-
-}
-
-TCPconnection::TCPconnection(boost::asio::io_context &context, QObject* parent):
-    QObject(parent),
-    m_socket(context)
-{
-
+    connect(socket_.get(), &QTcpSocket::readyRead, this, &TCPconnection::reading_data);
+    connect(this, &TCPconnection::reading_completed, this, &TCPconnection::request_processing);
+    connect(this, &TCPconnection::answer_ready, this, &TCPconnection::send_data);
+    connect(socket_.get(), &QTcpSocket::disconnected, this, &TCPconnection::handling_disconect);
 }
 
 
-void TCPconnection::m_recive_data()
+TCPconnection::~TCPconnection()
 {
-    auto this_ptr = shared_from_this();
-
-    //    boost::asio::async_read(m_socket, boost::asio::buffer(m_buffer), [this_ptr](const boost::system::error_code& error, size_t bytes_recived)
-//    {
-//        this_ptr->m_handle_read(error, bytes_recived);
-//    });
-        m_socket.async_read_some(boost::asio::buffer(m_buffer_read),
-                            [this_ptr](const boost::system::error_code& error, size_t bytes_recived)
-                             {
-                                 this_ptr->m_handle_read(error, bytes_recived);
-                             });
+    socket_->close();
 }
 
-void TCPconnection::m_handle_read(const boost::system::error_code &, size_t bytes_recived)
+std::string TCPconnection::get_info()
 {
-    std::cout << "Bytes recived: " << bytes_recived
-    << " from address: " << m_socket.remote_endpoint().address() << std::endl;
-
-    // выполняем обработку запроса
-    m_some_working();
-
-    // отправляем ответ
-    m_send_data(std::string(m_buffer_write, bytes_recived));
+    std::string info { "name: " + socket_->peerName().toStdString() +
+                ", address: " + socket_->peerAddress().toString().toStdString() +
+                ", port: " +  std::to_string(socket_->peerPort())};
+    return info;
 }
 
 
-void TCPconnection::m_send_data(const std::string &data)
+void TCPconnection::reading_data()
 {
-    auto this_ptr = shared_from_this();
+   buffer_to_read_ = socket_->readAll();
 
-    boost::asio::async_write(m_socket, boost::asio::buffer(data), [this_ptr](const boost::system::error_code& error, size_t bytes_transferred)
+   emit reading_completed(buffer_to_read_.size());
+}
+
+
+
+void TCPconnection::request_processing(int bytes_recived)
+{
+    buffer_to_write_ = buffer_to_read_;
+
+    emit answer_ready();
+}
+
+
+void TCPconnection::send_data()
+{
+    socket_->write(buffer_to_write_);
+}
+
+
+void TCPconnection::handling_disconect()
+{
+    emit connection_is_aborted(this);
+}
+
+void TCPconnection::do_command_(const std::string &command)
+{
+    if(command.length() > MAX_COMMAND_SIZE)
+        return;
+
+    COMMANDS command_code;
+
+    try
     {
-        this_ptr->m_handle_write(error, bytes_transferred);
-    });
-}
-
-void TCPconnection::m_some_working()
-{
-    for(int iter{0}; iter < SIZE_BUFFER; ++iter)
+        command_code = commands_.at(command);
+    }
+    catch (std::exception &e)
     {
-        m_buffer_write[iter] = m_buffer_read[iter];
+        return;
+    }
+
+    switch (command_code)
+    {
+    case CLOSE_CONNECTION:
+        emit connection_is_aborted(this);
+        break;
+    case CLOSE_SERVER:
+        emit close_server(this);
+        break;
+    default:
+        break;
     }
 }
 
-
-
-void TCPconnection::m_handle_write(const boost::system::error_code&, size_t bytes_transferred)
-{
-    std::cout << "Bytes transferred: " << bytes_transferred
-    << " to address: " << m_socket.remote_endpoint().address() << std::endl;
-
-    start();
-}
 
 

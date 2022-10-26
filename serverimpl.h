@@ -3,9 +3,12 @@
 
 #include <QObject>
 #include <memory>
-#include <boost/asio.hpp>
+#include <QAbstractSocket>
+#include <QTcpServer>
+#include <QTcpSocket>
 
 #include "tcpconnection.h"
+
 
 
 
@@ -19,17 +22,22 @@ public:
     servImpl(const int& port, QObject* parent = nullptr);
 
 protected:
-    void start_accept();
     void run();
-
-private:
-    std::string m_get_name_client(const tcp::socket& klient_sock);
-    void handler(TCPconnection::smart_pointer klient, const boost::system::error_code &error);
-    
-private:
-    std::unique_ptr<boost::asio::io_context> m_context{};
-    std::unique_ptr<tcp::acceptor> m_acceptor{};
-    
     friend class TCPserver;
+
+private slots:
+    void accept_connection();
+    void accept_error_handler(QAbstractSocket::SocketError socket_error);
+    void delet_klient(TCPconnection* klient);
+    void shutdown(TCPconnection* klient);
+
+signals:
+    void new_connection(std::shared_ptr<QTcpSocket> klient_socket);
+    
+private:
+    std::unique_ptr<QTcpServer> server_ipV4{};
+    std::unique_ptr<QTcpServer> server_ipV6{};
+    const int port_{};
+
 };
 
