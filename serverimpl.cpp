@@ -21,6 +21,7 @@ servImpl::servImpl(const int& port, QObject* parent):
     connect(server_ipV4.get(), &QTcpServer::newConnection, this, &servImpl::accept_connection);
     connect(server_ipV6.get(), &QTcpServer::newConnection, this, &servImpl::accept_connection);
 
+
 }
 
 
