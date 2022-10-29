@@ -22,6 +22,8 @@ public:
     ~TCPconnection();
     void start();
     std::string get_info();
+    bool is_disconnected();
+    void disconnect();
 
 private slots:
     void reading_data();
@@ -32,8 +34,8 @@ private slots:
 signals:
     void reading_completed(int bytes_recived);
     void answer_ready();
-    void close_server(TCPconnection* klient);
-    void connection_is_aborted(TCPconnection* conection);
+    void close_server();
+    void connection_disconnected(TCPconnection* connection);
 
 private:
     void do_command_(const std::string& command);

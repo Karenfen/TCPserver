@@ -19,9 +19,9 @@ class servImpl : public QObject
 
 public:
     ~servImpl() = default;
-    servImpl(const int& port, QObject* parent = nullptr);
 
 protected:
+    servImpl(const int& port, QObject* parent = nullptr);
     void run();
     friend class TCPserver;
 
@@ -29,13 +29,10 @@ private slots:
     void accept_connection();
     void accept_error_handler(QAbstractSocket::SocketError socket_error);
     void delet_klient(TCPconnection* klient);
-    void shutdown(TCPconnection* klient);
-
-signals:
-    void new_connection(std::shared_ptr<QTcpSocket> klient_socket);
+    void shutdown();
     
 private:
-    std::unique_ptr<QTcpServer> server_ipV4{};
+    std::unique_ptr<QTcpServer> server_{};
     std::unique_ptr<QTcpServer> server_ipV6{};
     const int port_{};
 
